@@ -4,7 +4,7 @@
 
 Se implementó un sistema de recetas favoritas que permite a los usuarios marcar sus recetas preferidas con un ícono de corazón directamente desde la lista. El estado de favorito se sincroniza en tiempo real con Firestore, por lo que persiste entre sesiones. Además, se agregó un filtro en la pantalla de lista para que el usuario pueda alternar entre ver todas sus recetas o únicamente las marcadas como favoritas.
 
-**Video explicación:**
+**Video explicación:** https://youtu.be/6AQoypjjnRM
 
 ### Definition of Done
 
@@ -24,7 +24,7 @@ Se implementó un sistema de recetas favoritas que permite a los usuarios marcar
 
 Se implementó la funcionalidad para compartir recetas a través de apps externas. Al pulsar el botón de compartir en el detalle de una receta, la pantalla se captura como imagen y se abre el selector nativo de Android para elegir la app destino. El archivo temporal se elimina automáticamente una vez que el proceso de compartir finaliza, y se muestra un estado de carga mientras se prepara la imagen.
 
-**Video explicación:**
+**Video explicación:** https://youtu.be/9BkBwkFtS-k
 
 ### Definition of Done
 
