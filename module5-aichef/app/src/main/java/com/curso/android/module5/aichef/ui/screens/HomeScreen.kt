@@ -40,6 +40,8 @@ import com.curso.android.module5.aichef.ui.viewmodel.ChefViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 
 /**
  * =============================================================================
@@ -69,8 +71,9 @@ fun HomeScreen(
     onNavigateToDetail: (String) -> Unit,
     onLogout: () -> Unit
 ) {
-    // Observar lista de recetas
-    val recipes by viewModel.recipes.collectAsStateWithLifecycle()
+    // Observar lista de recetas y estado de filtro de favoritos
+    val recipes by viewModel.filteredRecipes.collectAsStateWithLifecycle()
+    val showFavoritesOnly by viewModel.showFavoritesOnly.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -90,6 +93,27 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Logout,
                             contentDescription = "Cerrar sesión"
+                        )
+                    }
+
+                    //boton filtro favoritos
+                    IconButton(
+                        onClick = {
+                            viewModel.toggleFavoriteFilter()
+                        }
+                    ){
+                        Icon(
+                            imageVector = if(showFavoritesOnly){
+                                Icons.Default.Favorite
+                            }else{
+                                Icons.Default.FavoriteBorder
+                            },
+                            contentDescription = "Filtrar favoritos",
+                            tint = if(showFavoritesOnly){
+                                MaterialTheme.colorScheme.error
+                            }else{
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            }
                         )
                     }
                 }
@@ -129,7 +153,8 @@ fun HomeScreen(
                 ) { recipe ->
                     RecipeCard(
                         recipe = recipe,
-                        onClick = { onNavigateToDetail(recipe.id) }
+                        onClick = { onNavigateToDetail(recipe.id) },
+                        onFavoriteClick = { viewModel.toggleFavorite(recipe.id, !recipe.isFavorite) }
                     )
                 }
             }
@@ -144,7 +169,8 @@ fun HomeScreen(
 @Composable
 private fun RecipeCard(
     recipe: Recipe,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onFavoriteClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -183,6 +209,27 @@ private fun RecipeCard(
                         text = formatDate(recipe.createdAt),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                //agregar icono favorito
+                IconButton(onClick = onFavoriteClick) {
+                    Icon(
+                        imageVector = if(recipe.isFavorite){
+                            Icons.Default.Favorite
+                        }else{
+                            Icons.Default.FavoriteBorder
+                        },
+                        contentDescription = if(recipe.isFavorite){
+                            "Quitar de favoritos"
+                        }else{
+                            "Agregar a favoritos"
+                        },
+                        tint = if(recipe.isFavorite){
+                            MaterialTheme.colorScheme.error
+                        }else{
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
                     )
                 }
             }
