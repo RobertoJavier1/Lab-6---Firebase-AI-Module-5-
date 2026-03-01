@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Define las carpetas internas que FileProvider puede exponer para compartir
+    cache-path apunta a getCacheDir() — archivos temporales que el sistema
+    puede limpiar automáticamente cuando necesite espacio
+-->
+<paths>
+    <cache-path
+        name="shared_images"
+        path="shared_images/" />
+</paths>
