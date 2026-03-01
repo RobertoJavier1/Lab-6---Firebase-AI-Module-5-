@@ -19,11 +19,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,16 +36,25 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.curso.android.module5.aichef.domain.model.UiState
 import com.curso.android.module5.aichef.ui.viewmodel.ChefViewModel
+import com.curso.android.module5.aichef.util.ShareUtils
+import kotlinx.coroutines.launch
 
 /**
  * =============================================================================
@@ -131,6 +142,16 @@ fun RecipeDetailScreen(
     // Estado de la generación de imagen
     val imageState by viewModel.imageGenerationState.collectAsStateWithLifecycle()
 
+    val isSharing by viewModel.shareState.collectAsStateWithLifecycle()
+
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
+
+    //graphicslayer graba los pixels del composable para convertirlo en bitMap
+    val graphicsLayer = rememberGraphicsLayer()
+
+
     // =========================================================================
     // SIDE EFFECT: Verificar Cache o Generar Imagen
     // =========================================================================
@@ -178,6 +199,33 @@ fun RecipeDetailScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
+        },
+        floatingActionButton = {
+            //mostrar el FAB solo cuando la imagen ya esta lista para compartir
+            if(recipe != null && imageState is UiState.Success && !isSharing){
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            viewModel.setSharing(true)
+                            withFrameNanos {  }
+                            //scroll al inicio
+                            scrollState.scrollTo(0)
+                            withFrameNanos {  }
+                            //capturar el contenido de graphicslayer como bitmap
+                            val bitmap = graphicsLayer.toImageBitmap().asAndroidBitmap()
+                            ShareUtils.shareRecipeImage(context, bitmap,recipe.title)
+                            viewModel.setSharing(false)
+                        }
+                    },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Compartir receta"
+                        )
+                    },
+                    text = {Text("Compartir")}
+                )
+            }
         }
     ) { paddingValues ->
         if (recipe == null) {
@@ -191,43 +239,97 @@ fun RecipeDetailScreen(
                 Text("Receta no encontrada")
             }
         } else {
-            // ================================================================
-            // CONTENIDO SCROLLEABLE
-            // ================================================================
-            // verticalScroll permite scroll cuando el contenido es largo
-            // rememberScrollState mantiene la posición durante recomposiciones
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
-            ) {
-                // Sección de imagen generada por IA con cache
-                RecipeImageSection(
-                    imageState = imageState,
-                    recipeTitle = recipe.title,
-                    onRetry = {
-                        viewModel.generateRecipeImage(
-                            recipeId = recipe.id,
-                            existingImageUrl = "", // Forzar regeneración
-                            recipeTitle = recipe.title,
-                            ingredients = recipe.ingredients
-                        )
+            Box(modifier  = Modifier.fillMaxSize()){
+                // ================================================================
+                // CONTENIDO SCROLLEABLE
+                // ================================================================
+                // verticalScroll permite scroll cuando el contenido es largo
+                // rememberScrollState mantiene la posición durante recomposiciones
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        //
+                        .drawWithContent {
+                            graphicsLayer.record { this@drawWithContent.drawContent() }
+                            drawLayer(graphicsLayer)
+                        }
+                        .verticalScroll(scrollState)
+                        .padding(16.dp)
+                ) {
+
+                    if (isSharing) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Text(
+                                text = recipe.title,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                            )
+                        }
                     }
-                )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                    // Sección de imagen generada por IA con cache
+                    RecipeImageSection(
+                        imageState = imageState,
+                        recipeTitle = recipe.title,
+                        onRetry = {
+                            viewModel.generateRecipeImage(
+                                recipeId = recipe.id,
+                                existingImageUrl = "", // Forzar regeneración
+                                recipeTitle = recipe.title,
+                                ingredients = recipe.ingredients
+                            )
+                        }
+                    )
 
-                // Sección de ingredientes
-                IngredientsSection(ingredients = recipe.ingredients)
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                Spacer(modifier = Modifier.height(24.dp))
+                    // Sección de ingredientes
+                    IngredientsSection(ingredients = recipe.ingredients)
 
-                // Sección de pasos de preparación
-                StepsSection(steps = recipe.steps)
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    // Sección de pasos de preparación
+                    StepsSection(steps = recipe.steps)
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // ================================================================
+                //OVERLAY DE LOADING MIENTRAS SE PREPARA LA IMAGEN A COMPARTIR
+                //se superpone sobre el contenido sin bloquearlo visualmente
+                // ================================================================
+                if(isSharing){
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                        contentAlignment = Alignment.Center
+                    ){
+                        Card(
+                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                                Text("Preparando imagen...")
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -531,3 +633,5 @@ private fun StepsSection(steps: List<String>) {
         }
     }
 }
+
+

@@ -7,7 +7,7 @@ import androidx.core.content.FileProvider
 import java.io.File
 
 //utilidad: para compartir una imagen via el share sheet de Android.
-//flujo: Bitmap → archivo temporal en cache → URI segura (FileProvider) → Intent.ACTION_SEND
+//flujo: Bitmap -> archivo temporal en cache -> URI segura (FileProvider) -> Intent.ACTION_SEND
  //el archivo temporal se elimina en la próxima llamada para no acumular basura en cache
 object ShareUtils {
 

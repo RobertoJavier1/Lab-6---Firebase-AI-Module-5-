@@ -165,6 +165,19 @@ class ChefViewModel @Inject constructor(
 
     private var imageGenerationJob: Job? = null
 
+    // =========================================================================
+    // ESTADO DE COMPARTIR
+    // =========================================================================
+
+    // la captura de pantalla y el share intent ocurren en el screen
+    //el viewmodel solo expone si está en proceso para que la UI muestre el loader
+    private val _shareState = MutableStateFlow(false)
+    val shareState: StateFlow<Boolean> = _shareState.asStateFlow()
+
+    fun setSharing(value: Boolean){
+        _shareState.value = value
+    }
+
 
 
 
