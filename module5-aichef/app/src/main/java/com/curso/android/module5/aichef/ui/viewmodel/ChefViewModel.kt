@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.flow.combine
 
 /**
  * =============================================================================
@@ -123,6 +124,30 @@ class ChefViewModel @Inject constructor(
         )
 
     // =========================================================================
+    // RECETAS FILTRADAS
+    // =========================================================================
+    //estado de filtro de favoritos
+    private val _showFavoritesOnly = MutableStateFlow(false)
+    val showFavoritesOnly: StateFlow<Boolean> = _showFavoritesOnly.asStateFlow()
+
+    //combine para escuchar dos flows al mismo tiempo
+    val filteredRecipes: StateFlow<List<Recipe>> = combine(
+        recipes,
+        _showFavoritesOnly
+    ){recipes, favoritesOnly ->
+        if(favoritesOnly){
+            recipes.filter { it.isFavorite }
+        }else{
+            recipes
+        }
+
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    // =========================================================================
     // ESTADO DE GENERACIÓN DE RECETAS
     // =========================================================================
 
@@ -139,6 +164,10 @@ class ChefViewModel @Inject constructor(
     val imageGenerationState: StateFlow<UiState<String>> = _imageGenerationState.asStateFlow()
 
     private var imageGenerationJob: Job? = null
+
+
+
+
 
     // =========================================================================
     // ACCIONES DE AUTENTICACIÓN
@@ -284,6 +313,23 @@ class ChefViewModel @Inject constructor(
             firestoreRepository.deleteRecipe(recipeId)
         }
     }
+
+    // =========================================================================
+    // ACCIONES DE FAVORITOS
+    // =========================================================================
+    //cambiar el estado favorito de una receta
+    //actualiza Firestore directamente, el listener en tiempo real actualizara la lista automáticamente
+    fun toggleFavorite(recipeId: String, isFavorite: Boolean){
+        viewModelScope.launch {
+            firestoreRepository.toggleFavorite(recipeId, isFavorite)
+        }
+    }
+
+    //activa o descativa el filtro de favoritos
+    fun toggleFavoriteFilter(){
+        _showFavoritesOnly.value = !_showFavoritesOnly.value
+    }
+
 
     // =========================================================================
     // ACCIONES DE GENERACIÓN DE IMÁGENES CON CACHE
